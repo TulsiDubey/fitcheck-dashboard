@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -14,37 +13,31 @@ interface Message {
   timestamp: Date;
 }
 
-// Mock function to simulate chatbot response
-const getMockResponse = async (message: string): Promise<string> => {
-  // This is where you would integrate with OpenAI API
-  // For now, we'll use a simple mock
-  
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-  
-  const responses = [
-    "It's important to consult with a healthcare professional for personalized advice.",
-    "Regular check-ups are recommended to maintain good health.",
-    "A balanced diet and regular exercise can help prevent many health issues.",
-    "Staying hydrated is essential for overall health and wellbeing.",
-    "If you're experiencing severe symptoms, please seek immediate medical attention.",
-    "Mental health is just as important as physical health.",
-    "Getting adequate sleep is crucial for your immune system.",
-    "Vaccination is an important preventive measure against many diseases.",
-    "Stress management techniques like meditation can improve your health.",
-    "Regular screenings can help catch potential health issues early.",
-  ];
-  
-  // Simple keyword matching for demonstration
-  if (message.toLowerCase().includes('pneumonia')) {
-    return "Pneumonia symptoms include chest pain, cough with phlegm, fatigue, fever, and chills. If you suspect pneumonia, please consult with a doctor immediately.";
-  } else if (message.toLowerCase().includes('cancer') || message.toLowerCase().includes('lung cancer')) {
-    return "Lung cancer symptoms may include persistent cough, chest pain, shortness of breath, and coughing up blood. Early detection is crucial, so please consult with a healthcare professional if you have concerns.";
-  } else if (message.toLowerCase().includes('tuberculosis') || message.toLowerCase().includes('tb')) {
-    return "Tuberculosis (TB) symptoms include coughing that lasts three or more weeks, coughing up blood, chest pain, fatigue, and unintentional weight loss. TB is serious but treatable with proper medical care.";
+// Function to send message to Ollama AI (Local LLM)
+const sendMessageToAI = async (message: string, retries = 3): Promise<string> => {
+  try {
+    const response = await fetch("http://localhost:11434/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "mistral", // Change this to your installed model (e.g., llama3, gemma)
+        prompt: message,
+        stream: false, // Set to true for real-time streaming response
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.response || "No response from AI.";
+  } catch (error) {
+    console.error("Error:", error);
+    return "An error occurred. Please try again later.";
   }
-  
-  // Default to random response
-  return responses[Math.floor(Math.random() * responses.length)];
 };
 
 const ChatbotAI = () => {
@@ -71,42 +64,42 @@ const ChatbotAI = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!inputMessage.trim()) return;
-    
+
     const userMessage: Message = {
       id: Date.now().toString(),
       text: inputMessage,
       sender: 'user',
       timestamp: new Date(),
     };
-    
+
     setMessages(prevMessages => [...prevMessages, userMessage]);
     setInputMessage('');
     setIsLoading(true);
-    
+
     try {
-      // Get response from chatbot (replace with real OpenAI API call)
-      const response = await getMockResponse(inputMessage);
-      
+      // Get response from Ollama
+      const response = await sendMessageToAI(inputMessage);
+
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: response,
         sender: 'bot',
         timestamp: new Date(),
       };
-      
+
       setMessages(prevMessages => [...prevMessages, botMessage]);
     } catch (error) {
       console.error('Error getting chatbot response:', error);
-      
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: "I'm sorry, I'm having trouble responding right now. Please try again later.",
         sender: 'bot',
         timestamp: new Date(),
       };
-      
+
       setMessages(prevMessages => [...prevMessages, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -119,7 +112,7 @@ const ChatbotAI = () => {
         <h1 className="text-3xl font-bold mb-2">{t('chatbot_ai')}</h1>
         <p className="text-muted-foreground">Ask questions about health and medical concerns</p>
       </div>
-      
+
       <Card className="mt-6 flex-1 flex flex-col">
         <CardHeader className="bg-gradient-medical text-white">
           <CardTitle className="flex items-center">
@@ -127,19 +120,18 @@ const ChatbotAI = () => {
             MedAI Health Assistant
           </CardTitle>
         </CardHeader>
-        
+
         <CardContent className="flex-1 flex flex-col p-0">
-          {/* Message display area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map(message => (
-              <div 
-                key={message.id} 
+              <div
+                key={message.id}
                 className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div 
+                <div
                   className={`max-w-[80%] rounded-lg p-3 ${
-                    message.sender === 'user' 
-                      ? 'bg-medical-600 text-white rounded-tr-none' 
+                    message.sender === 'user'
+                      ? 'bg-medical-600 text-white rounded-tr-none'
                       : 'bg-gray-100 text-gray-800 rounded-tl-none'
                   }`}
                 >
@@ -177,7 +169,6 @@ const ChatbotAI = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Message input area */}
           <div className="p-4 border-t">
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <Input
@@ -187,8 +178,8 @@ const ChatbotAI = () => {
                 disabled={isLoading}
                 className="flex-1"
               />
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isLoading || !inputMessage.trim()}
                 className="bg-gradient-medical"
               >
