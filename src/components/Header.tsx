@@ -30,8 +30,8 @@ const Header = () => {
           <AvatarFallback>DR</AvatarFallback>
         </Avatar>
         <div>
-          <h2 className="font-semibold text-lg">{t('dr')} {user?.name || 'Jane Smith'}</h2>
-          <p className="text-sm text-gray-500">{t('cardiologist')} • +1 234 567 890</p>
+          <h2 className="font-semibold text-lg">{t('Dr Jame Smith')}</h2>
+          <p className="text-sm text-gray-500">{t('oncologist')} • +91 9854548454</p>
         </div>
       </div>
       
